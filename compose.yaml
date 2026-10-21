@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: kyle
+      POSTGRES_DB: kyle
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U kyle -d kyle]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  app:
+    image: kyle-app
+    build: .
+    environment:
+      DATABASE_URL: postgres://kyle:${POSTGRES_PASSWORD}@db:5432/kyle
+      APP_PASSWORD: ${APP_PASSWORD:?Set APP_PASSWORD in .env for initial startup}
+      AUTH_MODE: ${AUTH_MODE:-password}
+      APP_ORIGIN: ${APP_ORIGIN:?Set APP_ORIGIN to the browser-facing URL}
+      CALENDAR_ENCRYPTION_KEY: ${CALENDAR_ENCRYPTION_KEY:?Set a 64-character hex encryption key}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+    ports:
+      - 127.0.0.1:${APP_PORT:-3000}:3000
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+  backup:
+    image: postgres:17-alpine
+    environment:
+      PGHOST: db
+      PGUSER: kyle
+      PGDATABASE: kyle
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+    command: [sh, -c, "while true; do sh /backup.sh || exit 1; sleep 86400; done"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  database:

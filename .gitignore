@@ -147,3 +147,8 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Local verification and backups
+test-results/
+playwright-report/
+backups/
