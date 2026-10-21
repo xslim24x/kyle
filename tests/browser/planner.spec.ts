@@ -4,16 +4,12 @@ const monday = DateTime.now()
   .setZone("America/Toronto")
   .startOf("week")
   .toISODate()!;
-test("employer can plan coverage, assign a shift, fund it, publish it, and sign out", async ({
+test("employer can plan coverage, assign a shift, fund it, publish it, and reopen it directly", async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
-  await page
-    .getByLabel("Password", { exact: true })
-    .fill("browser-test-password-only");
-  await page.getByRole("button", { name: "Open planner" }).click();
   await expect(
     page.getByRole("heading", { name: "A clearer week ahead." }),
   ).toBeVisible();
@@ -84,17 +80,24 @@ test("employer can plan coverage, assign a shift, fund it, publish it, and sign 
     page.getByLabel("Private shift subscription URL"),
   ).not.toBeVisible();
   expect((await page.request.get(url)).status()).toBe(404);
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "A clearer week ahead." }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Password", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /Sign out|Lock workspace|^Access$/ }),
+  ).toHaveCount(0);
+  expect(
+    (await page.context().cookies()).some((c) =>
+      ["session", "device"].includes(c.name),
+    ),
+  ).toBe(false);
   expect(errors).toEqual([]);
 });
 test("mobile navigation and dialog fit a narrow viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await page
-    .getByLabel("Password", { exact: true })
-    .fill("browser-test-password-only");
-  await page.getByRole("button", { name: "Open planner" }).click();
   await page.getByRole("button", { name: "Add shift" }).first().click();
   await expect(page.getByRole("dialog")).toBeVisible();
   expect(
@@ -108,4 +111,27 @@ test("mobile navigation and dialog fit a narrow viewport", async ({ page }) => {
     path: "/tmp/kyle-planner-mobile.png",
     fullPage: true,
   });
+});
+
+test("a failed initial load shows a retry action and recovers directly into the planner", async ({
+  page,
+}) => {
+  await page.route("**/api/state", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Temporarily unavailable" }),
+    }),
+  );
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Unable to open your planner" }),
+  ).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveText("Temporarily unavailable");
+  await page.unroute("**/api/state");
+  await page.getByRole("button", { name: "Retry" }).click();
+  await expect(
+    page.getByRole("heading", { name: "A clearer week ahead." }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Password", { exact: true })).toHaveCount(0);
 });

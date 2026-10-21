@@ -21,7 +21,6 @@ export default defineConfig({
       DATABASE_URL:
         process.env.BROWSER_DATABASE_URL ??
         "postgres://postgres@127.0.0.1:55432/kyle_browser",
-      APP_PASSWORD: "browser-test-password-only",
       CALENDAR_ENCRYPTION_KEY: "1".repeat(64),
     },
   },

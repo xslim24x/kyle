@@ -19,8 +19,6 @@ export async function openDatabase(url: string) {
   await migrate(
     pool,
     `CREATE TABLE IF NOT EXISTS app_state (id integer PRIMARY KEY CHECK(id=1), revision integer NOT NULL DEFAULT 0, data jsonb NOT NULL);
- CREATE TABLE IF NOT EXISTS owner (id integer PRIMARY KEY CHECK(id=1), password_hash text NOT NULL);
- CREATE TABLE IF NOT EXISTS sessions (token_hash text PRIMARY KEY, expires timestamptz NOT NULL);
  CREATE TABLE IF NOT EXISTS publications (week date PRIMARY KEY, revision integer NOT NULL, snapshot jsonb NOT NULL, published_at timestamptz NOT NULL DEFAULT now());`,
   );
   await pool.query(

@@ -635,27 +635,6 @@ summary {
   font-size: 0.85rem;
   padding: 0.5rem 0;
 }
-.login {
-  max-width: 400px;
-  margin: 12vh auto;
-  padding: 2rem;
-}
-.login .brand-mark {
-  margin-bottom: 2rem;
-}
-.login h1 {
-  font-size: 1.8rem;
-}
-.login > p {
-  color: var(--muted);
-}
-.login button {
-  width: 100%;
-}
-.login > small {
-  display: block;
-  margin-top: 2rem;
-}
 .loading {
   padding: 4rem;
   text-align: center;
@@ -804,9 +783,6 @@ hr {
   .compact .field {
     min-width: 90px;
   }
-  .login {
-    margin: 6vh auto;
-  }
   .account {
     display: none;
   }
@@ -830,17 +806,4 @@ hr {
 }
 .fc-toolbar {
   margin: 0.25rem 0 0.8rem;
-}
-.mobile-controls {
-  display: none;
-}
-@media (max-width: 700px) {
-  .mobile-controls {
-    display: flex;
-    gap: 0.5rem;
-  }
-  .mobile-controls button {
-    font-size: 0.65rem;
-    padding: 0.35rem 0.5rem;
-  }
 }

@@ -17,7 +17,6 @@
     "check:format": "prettier --check src tests scripts *.json *.ts"
   },
   "dependencies": {
-    "@fastify/cookie": "^11.1.3",
     "@fastify/helmet": "^13.2.0",
     "@fastify/rate-limit": "^11.2.1",
     "@fastify/static": "^10.1.6",

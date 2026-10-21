@@ -74,9 +74,8 @@ Research limitation: official-page retrieval returned a proxy 403 during discove
 ## Hosting and access
 
 - Use TypeScript, React, a Node.js backend, PostgreSQL, and Docker Compose. The user supplies a reverse proxy to a VPS.
-- Require a password for public access unless equivalent reverse-proxy authentication protects the application. Optional PIN unlocking is limited to previously trusted devices; a short PIN is not the sole public login credential.
-- Permit unlocked operation only behind private access or configured external authentication. Make the deployment mode explicit.
-- Hash passwords, rate-limit authentication, use secure server-managed sessions, and provide logout and trusted-device revocation.
+- Open the application directly without application authentication, per the user's subsequent scope change. Provide no login screen, password/PIN settings, session requirement, or lock/sign-out controls.
+- Access restrictions, when needed, are managed outside the application through the reverse proxy or network. Retain same-origin checks for browser writes.
 - Support TLS termination at the trusted reverse proxy. Keep the database private and secrets outside source control.
 - Include automated backups and a tested restore procedure. Live processes and external calendar authentication must be recoverable after restart.
 - Restrict server-side calendar fetching against private-network access and unsafe redirects; treat external event text as untrusted content.
@@ -90,5 +89,5 @@ Research limitation: official-page retrieval returned a proxy 403 during discove
 5. A future budget or rate change leaves historical inputs intact. Wages, employer costs, and remaining budget reconcile to the configured inputs.
 6. An over-budget draft remains editable and requires acknowledgement to publish; missing pay inputs remain visibly incomplete.
 7. Multiple calendars appear beside shifts. Filtering affects visibility only; remote appointment editing is unavailable. Recurrences, cancellations, all-day events, and failed refreshes are handled explicitly.
-8. Public unauthenticated requests cannot read staff, appointment, or budget data. Revoked sessions and export tokens stop working.
+8. The planner and API open without credentials, and editing/publication work without session cookies. Cross-site writes remain blocked. Revoked calendar export tokens stop working.
 9. A backup restored into a fresh deployment recovers staff, schedules, budgets, and settings; calendar reconnection requirements are visible.

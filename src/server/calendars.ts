@@ -10,7 +10,7 @@ import {
 import { z } from "zod";
 import { DateTime } from "luxon";
 import { fetchCalendar, parseCalendar } from "./calendar-source.js";
-import { digest, token } from "./auth.js";
+import { digest, token } from "./tokens.js";
 import { ZONE, type State } from "../shared/schema.js";
 interface Options {
   origin: string;

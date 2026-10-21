@@ -4,20 +4,11 @@ import { createApp } from "../src/server/app.js";
 test("optimistic saves prevent lost updates and published snapshots survive edits and restart", async () => {
   const config = {
     databaseUrl: process.env.TEST_DATABASE_URL!,
-    password: "test password long enough",
     origin: "http://localhost:3000",
-    secureCookies: false,
   };
   let app = await createApp(config);
   try {
-    const login = await app.inject({
-      method: "POST",
-      url: "/api/login",
-      payload: { password: config.password },
-    });
-    const cookie = login.cookies.map((c) => `${c.name}=${c.value}`).join("; ");
-    const headers = { cookie };
-    const current = (await app.inject({ url: "/api/state", headers })).json();
+    const current = (await app.inject({ url: "/api/state" })).json();
     const data = {
       ...current.data,
       budgets: [
@@ -33,7 +24,6 @@ test("optimistic saves prevent lost updates and published snapshots survive edit
       app.inject({
         method: "PUT",
         url: "/api/state",
-        headers,
         payload: { revision: current.revision, data },
       });
     const results = await Promise.all([save(), save()]);
@@ -44,7 +34,6 @@ test("optimistic saves prevent lost updates and published snapshots survive edit
         await app.inject({
           method: "POST",
           url: "/api/publish",
-          headers,
           payload: { week: "2026-10-19", revision, acknowledge: false },
         })
       ).statusCode,
@@ -55,7 +44,6 @@ test("optimistic saves prevent lost updates and published snapshots survive edit
         await app.inject({
           method: "POST",
           url: "/api/publish",
-          headers,
           payload: { week: "2026-10-19", revision, acknowledge: true },
         })
       ).statusCode,
@@ -65,13 +53,12 @@ test("optimistic saves prevent lost updates and published snapshots survive edit
     await app.inject({
       method: "PUT",
       url: "/api/state",
-      headers,
       payload: { revision, data },
     });
     await app.close();
     app = await createApp(config);
     const week = (
-      await app.inject({ url: "/api/week?week=2026-10-19", headers })
+      await app.inject({ url: "/api/week?week=2026-10-19" })
     ).json();
     assert.equal(week.budgetCents, 60000);
     assert.equal(week.publication.snapshot.summary.budgetCents, 50000);

@@ -7,9 +7,9 @@ Kyle is a single-employer planning application. It currently calculates base-rat
 Requirements: Docker Engine with Compose v2, a reverse proxy, and a hostname with HTTPS for public use.
 
 1. Run `node scripts/init-env.mjs` from the repository root. It creates a mode-0600 `.env` with unique secrets and refuses to overwrite an existing file. Alternatively copy `.env.example` and populate every required value securely.
-2. Edit `.env`: choose an `APP_PASSWORD` of at least 12 characters and set `APP_ORIGIN` to the exact browser-facing origin, for example `https://schedule.example.com` (no trailing slash). Keep generated `POSTGRES_PASSWORD` and `CALENDAR_ENCRYPTION_KEY`. Use a hexadecimal database password to avoid URL-encoding issues.
+2. Edit `.env`: set `APP_ORIGIN` to the exact browser-facing origin, for example `https://schedule.example.com` (no trailing slash). Keep generated `POSTGRES_PASSWORD` and `CALENDAR_ENCRYPTION_KEY`. Use a hexadecimal database password to avoid URL-encoding issues.
 3. Run `docker compose up --build -d`.
-4. Check `docker compose ps` and request `/api/health` through the proxy. Log in and create an employee, coverage need, shift, and budget to verify the complete route.
+4. Check `docker compose ps` and request `/api/health` through the proxy. Open the planner and create an employee, coverage need, shift, and budget to verify the complete route.
 
 In this cloud workspace, container builds cannot reach npm directly. After a verified host `npm ci --cache /workspace/.npm-cache`, the tested alternative is:
 
@@ -30,15 +30,9 @@ schedule.example.com {
 }
 ```
 
-The application checks browser mutation origins against `APP_ORIGIN`. HTTPS origins enable secure session cookies. Login rate limiting deliberately uses the direct peer address; proxy clients share the limit, and spoofed forwarded headers cannot bypass it.
+The application checks browser mutation origins against `APP_ORIGIN`. The planner opens directly with no application login, password, PIN, or session cookies. Anyone who can reach the application can view and edit its data; configure access restrictions at your reverse proxy or network as needed.
 
-`APP_PASSWORD` bootstraps the owner only on the first start. Changing it in `.env` after initialization does not change the stored password. Use the recovery procedure below.
-
-## Access modes
-
-Password authentication is the default. Under Access, verify the password to establish a 6–12 digit PIN on the current browser. Trust expires after 30 days. Lock workspace ends the current session but retains device trust; Sign out removes trust for that browser. Revoke all trusted devices disables future PIN unlocks. Sessions expire after 12 hours. PIN attempts have both per-address throttling and a persistent per-device lockout.
-
-For an installation already protected by private networking or reverse-proxy authentication, `AUTH_MODE=private` explicitly bypasses application login. This exposes all application data to anyone who can reach the listener. Keep the application port isolated and authenticate at the proxy. This mode is unsuitable for an unprotected public listener; the application cannot verify your proxy configuration.
+Existing deployments can remove `APP_PASSWORD` and `AUTH_MODE` from `.env`. Those variables are no longer read. Legacy authentication tables may remain in an existing database but are no longer used or created; scheduling data requires no migration.
 
 ## Calendar connections
 
@@ -69,17 +63,7 @@ docker compose exec -T db createdb -U kyle kyle_restore
 docker compose exec -T db pg_restore -U kyle -d kyle_restore --no-owner --exit-on-error < backups/YOUR_DUMP.dump
 ```
 
-Point the app's `DATABASE_URL` at `kyle_restore` through a local Compose override, start the app, and verify login, staff, shifts, budgets, publication snapshots, and calendar settings. Retain the original database until the restored copy is confirmed. Then choose which database to keep and update the deployment configuration explicitly. Restart backup with `PGDATABASE` matching the chosen database. Never restore untrusted dumps.
-
-## Password recovery
-
-Run the recovery command inside the app container with a temporary `NEW_APP_PASSWORD` environment variable supplied securely through your shell or secret manager:
-
-```sh
-docker compose exec -e NEW_APP_PASSWORD app node --import tsx scripts/reset-password.ts
-```
-
-The command changes the password and revokes all sessions and trusted devices without printing the password. Clear the temporary environment variable afterward. A password change does not rotate the calendar encryption key.
+Point the app's `DATABASE_URL` at `kyle_restore` through a local Compose override, start the app, and verify direct planner access, staff, shifts, budgets, publication snapshots, and calendar settings. Retain the original database until the restored copy is confirmed. Then choose which database to keep and update the deployment configuration explicitly. Restart backup with `PGDATABASE` matching the chosen database. Never restore untrusted dumps.
 
 ## Development and checks
 
@@ -92,7 +76,7 @@ docker exec kyle-dev-db createdb -U postgres kyle_browser
 
 This trust-authenticated container is for disposable local development only; production Compose uses a password and an isolated network.
 
-Set `DATABASE_URL`, a development `APP_PASSWORD`, and `APP_ORIGIN=http://localhost:5173`, then run `npm run dev`. `CALENDAR_ENCRYPTION_KEY` is required only when using calendar connections. Environment variables are read from the process; use your shell or Node's `--env-file` option when running outside Compose.
+Set `DATABASE_URL` and `APP_ORIGIN=http://localhost:5173`, then run `npm run dev`. `CALENDAR_ENCRYPTION_KEY` is required only when using calendar connections. Environment variables are read from the process; use your shell or Node's `--env-file` option when running outside Compose.
 
 ```sh
 TEST_DATABASE_URL=postgres://postgres@127.0.0.1:55432/kyle npm test
@@ -101,6 +85,6 @@ npm run test:browser
 npm run check:format
 ```
 
-Tests must target a disposable database: persistence tests modify schedules and publication data. Browser tests use the separate `kyle_browser` database and a test-only password; override `BROWSER_DATABASE_URL` if necessary. They use `/usr/bin/chromium` by default; set `CHROMIUM_PATH` for your installed browser. Never point either suite at a production database.
+Tests must target a disposable database: persistence tests modify schedules and publication data. Browser tests use the separate `kyle_browser` database with direct access; override `BROWSER_DATABASE_URL` if necessary. They use `/usr/bin/chromium` by default; set `CHROMIUM_PATH` for your installed browser. Never point either suite at a production database.
 
 Production serving uses `npm start` after `npm run build`. Initial schema creation is idempotent and runs at startup. Scheduling state is stored as one versioned JSONB document, appropriate for this single employer; compare-and-swap writes prevent lost updates. Publication uses a transaction and stores immutable-at-publication inputs, so subsequent edits do not silently rewrite a published estimate. Republishing explicitly replaces the published snapshot for that week.

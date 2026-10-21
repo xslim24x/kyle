@@ -18,8 +18,6 @@ services:
     build: .
     environment:
       DATABASE_URL: postgres://kyle:${POSTGRES_PASSWORD}@db:5432/kyle
-      APP_PASSWORD: ${APP_PASSWORD:?Set APP_PASSWORD in .env for initial startup}
-      AUTH_MODE: ${AUTH_MODE:-password}
       APP_ORIGIN: ${APP_ORIGIN:?Set APP_ORIGIN to the browser-facing URL}
       CALENDAR_ENCRYPTION_KEY: ${CALENDAR_ENCRYPTION_KEY:?Set a 64-character hex encryption key}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}

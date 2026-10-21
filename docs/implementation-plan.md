@@ -4,11 +4,11 @@ Scope and acceptance scenarios: [requirements](requirements.md). Vocabulary: [gl
 
 This is the original delivery plan. See [implementation status](status.md) for delivered capabilities and remaining verification. Complete each stage with a working end-to-end slice before expanding it.
 
-## 1. Application foundation and private access
+## 1. Application foundation and direct access
 
-Set up the TypeScript React client, Node.js server, PostgreSQL migrations, and Docker Compose development workflow. Choose maintained libraries during implementation against current documentation. Implement single-employer password setup, login, logout, protected routes, and reverse-proxy deployment settings. Keep the database off the public network.
+Set up the TypeScript React client, Node.js server, PostgreSQL migrations, and Docker Compose development workflow. Choose maintained libraries during implementation against current documentation. Serve the single-employer planner directly without application authentication, with reverse-proxy deployment settings and same-origin checks for writes. Keep the database off the public network.
 
-Done when a fresh local deployment starts, persists data across restart, serves an authenticated page, rejects unauthenticated data access, and has reproducible installation/build/test commands. Verify authentication rate limits and session revocation. Add a configuration example containing no secrets.
+Done when a fresh local deployment starts, persists data across restart, opens directly without credentials, and has reproducible installation/build/test commands. Verify that removed login and device endpoints are unavailable. Add a configuration example containing no secrets.
 
 ## 2. Employees, needs, and the manual weekly planner
 
@@ -40,9 +40,9 @@ Done when acceptance scenario 7 passes using integration fixtures and an authori
 
 ## 6. Self-hosted release verification
 
-Complete optional trusted-device PIN unlocking, explicit externally protected/private access modes, backup scheduling, restore instructions, and reverse-proxy configuration guidance. Test accessibility and usable layouts on desktop and mobile. Verify sensitive data is excluded from logs and credentials survive only through supported secure storage.
+Complete backup scheduling, restore instructions, and reverse-proxy configuration guidance. Application password/PIN authentication was removed by a subsequent user request. Test accessibility and usable layouts on desktop and mobile. Verify sensitive data is excluded from logs and credentials survive only through supported secure storage.
 
-Done when acceptance scenarios 8–9 pass and the complete manual planning workflow works in a fresh Docker Compose deployment. Exercise password recovery and a documented backup restore. Document any remaining limitations accurately before release.
+Done when acceptance scenarios 8–9 pass and the complete manual planning workflow works in a fresh Docker Compose deployment. Exercise direct application access and a documented backup restore. Document any remaining limitations accurately before release.
 
 ## 7. Later: reviewed assignment suggestions
 

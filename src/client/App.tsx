@@ -4,7 +4,6 @@ import { api, send } from "./api";
 import { Field, Form, Modal, money, num } from "./components";
 import { ShiftEditor, EmployeeEditor, NeedEditor } from "./editors";
 import { Planner, type Appointment } from "./Planner";
-import { AccessSettings } from "./AccessSettings";
 import { CalendarSettings } from "./CalendarSettings";
 import { evaluateWeek } from "../shared/planning";
 import {
@@ -24,14 +23,7 @@ type Editor =
   | null;
 export default function App() {
   const weekRequest = useRef(0);
-  const [authInfo, setAuthInfo] = useState({
-    trusted: false,
-    privateMode: false,
-  });
-  const [usePin, setUsePin] = useState(false);
-  const [session, setSession] = useState<"loading" | "locked" | "open">(
-    "loading",
-  );
+  const [loading, setLoading] = useState(true);
   const [record, setRecord] = useState<{
     revision: number;
     data: State;
@@ -44,18 +36,17 @@ export default function App() {
   const [publication, setPublication] = useState<any>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   async function load() {
+    setLoading(true);
     try {
-      setAuthInfo(await api("/auth-info"));
       setRecord(await api("/state"));
-      setSession("open");
       setError("");
     } catch (e) {
-      setSession("locked");
-      setError(
-        (e as Error).message === "Please sign in" ? "" : (e as Error).message,
-      );
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
     }
   }
+
   useEffect(() => {
     void load();
   }, []);
@@ -73,8 +64,8 @@ export default function App() {
     }
   }
   useEffect(() => {
-    if (session === "open") void refreshWeek();
-  }, [week, record?.revision, session]);
+    if (record) void refreshWeek();
+  }, [week, record?.revision]);
   async function save(data: State) {
     if (!record) return;
     setBusy(true);
@@ -106,55 +97,20 @@ export default function App() {
       },
     });
   }
-  if (session === "loading")
+  if (loading)
     return (
       <main className="loading" role="status">
         Opening your planner…
       </main>
     );
-  if (session === "locked")
+  if (!record)
     return (
-      <main className="login">
-        <div className="brand-mark">k</div>
-        <h1>Your week, supported.</h1>
-        <p>Sign in to your Kyle workspace.</p>
-        <Form
-          onSubmit={async (f) => {
-            await api(
-              usePin ? "/unlock" : "/login",
-              send(
-                "POST",
-                usePin
-                  ? { pin: String(f.get("password")) }
-                  : { password: String(f.get("password")) },
-              ),
-            );
-            await load();
-          }}
-        >
-          <Field label={usePin ? "PIN" : "Password"}>
-            <input
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              autoFocus
-            />
-          </Field>
-          <button className="primary" type="submit">
-            Open planner →
-          </button>
-        </Form>
-        {error && <p role="alert">{error}</p>}
-        {authInfo.trusted && (
-          <button onClick={() => setUsePin(!usePin)}>
-            {usePin ? "Use password" : "Unlock with PIN"}
-          </button>
-        )}
-        <small>Private staff scheduling · Kyle</small>
+      <main className="loading">
+        <h1>Unable to open your planner</h1>
+        <p role="alert">{error}</p>
+        <button onClick={() => void load()}>Retry</button>
       </main>
     );
-  if (!record) return null;
   const state = record.data;
   const summary = evaluateWeek(state, week);
   const close = () => setEditor(null);
@@ -169,48 +125,22 @@ export default function App() {
         </a>
         <div className="workspace-label">YOUR WORKSPACE</div>
         <nav aria-label="Main navigation">
-          {[
-            "Planner",
-            "Support staff",
-            "Coverage needs",
-            "Calendars",
-            "Access",
-          ].map((item, i) => (
-            <button
-              className={tab === item ? "selected" : ""}
-              key={item}
-              onClick={() => setTab(item)}
-            >
-              <span aria-hidden>{["▦", "♧", "◷", "◈", "⌑"][i]}</span>
-              {item}
-            </button>
-          ))}
+          {["Planner", "Support staff", "Coverage needs", "Calendars"].map(
+            (item, i) => (
+              <button
+                className={tab === item ? "selected" : ""}
+                key={item}
+                onClick={() => setTab(item)}
+              >
+                <span aria-hidden>{["▦", "♧", "◷", "◈"][i]}</span>
+                {item}
+              </button>
+            ),
+          )}
         </nav>
         <div className="sidebar-bottom">
           <span className="status-dot" /> Single-employer workspace
           <p>Ontario · {ZONE}</p>
-          {!authInfo.privateMode && (
-            <button
-              onClick={async () => {
-                await api("/lock", send("POST", {}));
-                setUsePin(false);
-                await load();
-              }}
-            >
-              Lock workspace
-            </button>
-          )}
-          <button
-            onClick={async () => {
-              await api("/logout", send("POST", {}));
-              setRecord(null);
-              setSession("locked");
-              setAuthInfo({ trusted: false, privateMode: false });
-              setUsePin(false);
-            }}
-          >
-            Sign out
-          </button>
         </div>
       </aside>
       <main className="main">
@@ -218,17 +148,6 @@ export default function App() {
           <span>
             Workspace <span className="breadcrumb">/ {tab}</span>
           </span>
-          <div className="mobile-controls">
-            <button
-              onClick={async () => {
-                await api("/lock", send("POST", {}));
-                setUsePin(false);
-                await load();
-              }}
-            >
-              Lock
-            </button>
-          </div>
           <span className="account">
             Individual employer <span className="avatar">K</span>
           </span>
@@ -244,9 +163,7 @@ export default function App() {
                   ? "Availability, rates, and preferences for your team."
                   : tab === "Coverage needs"
                     ? "Define the support you need, before assigning a person."
-                    : tab === "Access"
-                      ? "Control access to your private workspace."
-                      : "Bring the individual’s appointments into the weekly picture."}
+                    : "Bring the individual’s appointments into the weekly picture."}
             </p>
           </div>
           {tab === "Planner" && (
@@ -562,7 +479,6 @@ export default function App() {
             ))}
           </section>
         )}
-        {tab === "Access" && <AccessSettings />}
         {tab === "Calendars" && (
           <CalendarSettings week={week} onChange={refreshWeek} />
         )}
